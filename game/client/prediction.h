@@ -87,6 +87,9 @@ protected:
 	void			StartCommand( C_BasePlayer *player, CUserCmd *cmd );
 	void			FinishCommand( C_BasePlayer *player );
 
+	// Helper to determine if the user is standing on ground
+	void			CheckMovingGround(CBasePlayer* player, double frametime);
+
 	// Helpers to call pre and post think for player, and to call think if a think function is set
 	void			RunPreThink( C_BasePlayer *player );
 	void			RunThink (C_BasePlayer *ent, double frametime );

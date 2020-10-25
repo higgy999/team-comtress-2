@@ -29,6 +29,7 @@
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
+#include "../../engine/host.h"
 
 IPredictionSystem *IPredictionSystem::g_pPredictionSystems = NULL;
 
@@ -759,6 +760,44 @@ void CPrediction::FinishCommand( C_BasePlayer *player )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Checks if the player is standing on a moving entity and adjusts velocity and 
+//  basevelocity appropriately
+// Input  : *player - 
+//			frametime - 
+//-----------------------------------------------------------------------------
+void CPrediction::CheckMovingGround(CBasePlayer* player, double frametime)
+{
+	VPROF("CPlayerMove::CheckMovingGround()");
+
+	CBaseEntity* groundentity;
+
+	if (player->GetFlags() & FL_ONGROUND)
+	{
+		groundentity = player->GetGroundEntity();
+		if (groundentity && (groundentity->GetFlags() & FL_CONVEYOR))
+		{
+			Vector vecNewVelocity;
+			groundentity->GetGroundVelocityToApply(vecNewVelocity);
+			if (player->GetFlags() & FL_BASEVELOCITY)
+			{
+				vecNewVelocity += player->GetBaseVelocity();
+			}
+			player->SetBaseVelocity(vecNewVelocity);
+			player->AddFlag(FL_BASEVELOCITY);
+		}
+	}
+
+	if (!(player->GetFlags() & FL_BASEVELOCITY))
+	{
+		// Apply momentum (add in half of the previous frame of velocity first)
+		player->ApplyAbsVelocityImpulse((1.0 + (frametime * 0.5)) * player->GetBaseVelocity());
+		player->SetBaseVelocity(vec3_origin);
+	}
+
+	player->RemoveFlag(FL_BASEVELOCITY);
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Called before player thinks
 // Input  : *player - 
 //			thinktime - 
@@ -876,7 +915,8 @@ void CPrediction::RunCommand( C_BasePlayer *player, CUserCmd *ucmd, IMoveHelper 
 	player->UpdateButtonState( ucmd->buttons );
 
 // TODO
-//	CheckMovingGround( player, ucmd->frametime );
+	//CheckMovingGround( player, ucmd->frametime );
+	CheckMovingGround( player, TICK_INTERVAL);
 
 // TODO
 //	g_pMoveData->m_vecOldAngles = player->pl.v_angle;
